@@ -1,5 +1,5 @@
-import { useRef, useState, type DragEvent } from 'react';
-import { Upload, FileText, Sparkles } from 'lucide-react';
+import { useRef, useState, useEffect, type DragEvent } from 'react';
+import { Upload, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store/useStore';
 
@@ -39,10 +39,9 @@ export function EmptyState() {
   // Hidden textarea for paste capture
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const focusTextarea = () => {
+  useEffect(() => {
     textareaRef.current?.focus();
-    setIsFocused(true);
-  };
+  }, []);
 
   return (
     <div
@@ -97,27 +96,14 @@ export function EmptyState() {
 
       {/* Action area */}
       <motion.div
-        className="flex gap-4 items-center"
+        className="flex gap-2 items-center"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
-        <button
-          onClick={focusTextarea}
-          className={`
-            px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300
-            flex items-center gap-2.5 cursor-pointer
-            ${isFocused
-              ? 'bg-indigo-500/30 border border-indigo-400/50 text-indigo-200 shadow-lg shadow-indigo-500/20'
-              : 'bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80 hover:border-white/20'
-            }
-          `}
-        >
-          <FileText className="w-4 h-4" />
-          Paste data
-        </button>
-
-        <span className="text-white/20 text-sm">or</span>
+        <p className={`text-sm font-medium transition-all duration-300 ${isFocused ? 'text-indigo-300' : 'text-white/60'}`}>
+          Paste data <span className="text-white/30 font-normal">or</span>
+        </p>
 
         <button
           onClick={() => fileInputRef.current?.click()}

@@ -62,14 +62,12 @@ export function Toolbar() {
                 >
                   <Pencil className="w-2.5 h-2.5" />
                 </button>
-                {datasets.length > 1 && (
-                  <button
-                    onClick={() => removeDataset(ds.id)}
-                    className="text-white/20 hover:text-red-400/60 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
+                <button
+                  onClick={() => removeDataset(ds.id)}
+                  className="text-white/20 hover:text-red-400/60 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
               </>
             )}
           </div>

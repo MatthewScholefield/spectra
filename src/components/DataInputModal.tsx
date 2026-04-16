@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, FileText, Upload } from 'lucide-react';
+import { X, Upload } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
 export function DataInputModal() {
@@ -8,15 +8,22 @@ export function DataInputModal() {
   const setShow = useStore((s) => s.setShowDataModal);
   const addData = useStore((s) => s.addData);
   const datasetCount = useStore((s) => s.datasets.length);
-  const [text, setText] = useState('');
-  const [name, setName] = useState(`Run ${datasetCount + 1}`);
+  const [name, setName] = useState(`Dataset ${datasetCount + 1}`);
+  const [isFocused, setIsFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleSubmit = () => {
+  useEffect(() => {
+    if (show) {
+      textareaRef.current?.focus();
+      setName(`Dataset ${datasetCount + 1}`);
+    }
+  }, [show, datasetCount]);
+
+  const handlePaste = (text: string) => {
     if (text.trim()) {
       addData(text, name || undefined);
-      setText('');
-      setName(`Run ${datasetCount + 2}`);
+      setShow(false);
     }
   };
 
@@ -26,7 +33,10 @@ export function DataInputModal() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const content = ev.target?.result as string;
-      setText(content);
+      if (content) {
+        addData(content, name || undefined);
+        setShow(false);
+      }
     };
     reader.readAsText(file);
   };
@@ -46,9 +56,21 @@ export function DataInputModal() {
             onClick={() => setShow(false)}
           />
 
+          {/* Hidden textarea for paste capture */}
+          <textarea
+            ref={textareaRef}
+            className="fixed opacity-0 pointer-events-none w-0 h-0"
+            onBlur={() => setIsFocused(false)}
+            onPaste={(e) => {
+              const text = e.clipboardData.getData('text');
+              handlePaste(text);
+            }}
+            onChange={() => {}}
+          />
+
           {/* Modal */}
           <motion.div
-            className="relative glass-card w-full max-w-lg mx-4 p-6 space-y-4"
+            className="relative glass-card w-full max-w-md mx-4 p-6 space-y-5"
             initial={{ scale: 0.95, opacity: 0, y: 10 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
@@ -75,57 +97,34 @@ export function DataInputModal() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full text-sm"
-                placeholder="Run 1"
+                placeholder="Dataset 1"
+                onFocus={() => setIsFocused(false)}
               />
             </div>
 
-            {/* Text area */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-[11px] text-white/40 uppercase tracking-wider">
-                  Data
-                </label>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="text-[11px] text-white/30 hover:text-white/60 flex items-center gap-1 transition-colors cursor-pointer"
-                >
-                  <Upload className="w-3 h-3" />
-                  Upload file
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".csv,.tsv,.json,.txt"
-                  className="hidden"
-                  onChange={handleFile}
-                />
-              </div>
-              <textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                className="w-full h-48 text-xs font-mono resize-none"
-                placeholder="Paste your CSV, TSV, or JSON data here..."
-                spellCheck={false}
+            {/* Paste / Upload area */}
+            <div className="flex gap-2 items-center justify-center py-4">
+              <p className={`text-sm font-medium transition-all duration-300 ${isFocused ? 'text-indigo-300' : 'text-white/60'}`}>
+                Paste data
+              </p>
+              <span className="text-white/30 text-sm">or</span>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="px-4 py-2 rounded-xl text-sm font-medium bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80 hover:border-white/20 transition-all duration-300 flex items-center gap-2 cursor-pointer"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                Upload file
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.tsv,.json,.txt"
+                className="hidden"
+                onChange={handleFile}
               />
             </div>
 
-            {/* Submit */}
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShow(false)}
-                className="px-4 py-2 text-sm text-white/40 hover:text-white/60 transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={!text.trim()}
-                className="px-5 py-2 text-sm font-medium bg-indigo-500/30 text-indigo-200 rounded-xl border border-indigo-400/30 hover:bg-indigo-500/40 transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-              >
-                <FileText className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
-                Add Data
-              </button>
-            </div>
+            <p className="text-xs text-white/20 text-center">Supports CSV, TSV, JSON</p>
           </motion.div>
         </motion.div>
       )}

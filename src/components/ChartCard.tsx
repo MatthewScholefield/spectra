@@ -5,7 +5,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import { motion } from 'framer-motion';
-import { Settings, ChevronDown, ChevronUp } from 'lucide-react';
+import { Settings, ChevronUp } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { ChartControls } from './ChartControls';
 import type { ChartConfig as ChartConfigType } from '../engine/types';
@@ -84,7 +84,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
             <XAxis dataKey={xKey} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
             <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={50} tickFormatter={formatNumber} />
             <Tooltip content={<CustomTooltip />} />
-            {visibleSeries.map((s, i) => (
+            {visibleSeries.map((s) => (
               <Area
                 key={`${s.datasetId}-${s.columnKey}`}
                 type="monotone"
@@ -200,7 +200,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
       )}
 
       {/* Chart */}
-      <div className="flex-1 min-h-0 px-2 pb-3" style={{ height: showControls ? 220 : 280 }}>
+      <div className="px-2 pb-3" style={{ height: 280 }}>
         <ResponsiveContainer width="100%" height="100%">
           {renderChart()}
         </ResponsiveContainer>

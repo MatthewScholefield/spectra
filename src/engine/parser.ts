@@ -72,7 +72,7 @@ function parseDelimited(text: string): DataTable | null {
   if (!fields || fields.length === 0) return null;
 
   const columns: Column[] = fields.map((field) => {
-    const values = result.data.map((row: Record<string, unknown>) => {
+    const values = result.data.map((row: unknown) => {
       const v = (row as Record<string, string | number | null>)[field];
       if (v === undefined || v === null) return null;
       return v;

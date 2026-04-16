@@ -18,6 +18,6 @@ export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-export function generateRunName(existingCount: number): string {
-  return `Run ${existingCount + 1}`;
+export function generateDatasetName(existingCount: number): string {
+  return `Dataset ${existingCount + 1}`;
 }

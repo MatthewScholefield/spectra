@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { Dataset, ChartConfig, ChartType } from '../engine/types';
 import { parseRawData } from '../engine/parser';
 import { generateCharts, mergeDatasetIntoCharts } from '../engine/analyzer';
-import { generateId, generateRunName } from '../utils/format';
+import { generateId, generateDatasetName } from '../utils/format';
 
 type GridColumns = 1 | 2 | 3;
 
@@ -44,7 +44,7 @@ export const useStore = create<AppState>((set, get) => ({
 
     const state = get();
     const datasetId = generateId();
-    const datasetName = name || generateRunName(state.datasets.length);
+    const datasetName = name || generateDatasetName(state.datasets.length);
 
     const dataset: Dataset = { id: datasetId, name: datasetName, table };
 

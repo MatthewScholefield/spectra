@@ -13,7 +13,7 @@ export function VisualizationView() {
 
   return (
     <div className="flex-1 overflow-auto p-6">
-      <div className={`grid ${gridClass} gap-5 auto-rows-min`}>
+      <div className={`grid ${gridClass} gap-5 items-start`}>
         {charts.map((chart, i) => (
           <ChartCard key={chart.id} chart={chart} index={i} />
         ))}
