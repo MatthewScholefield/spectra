@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import type { ChartConfig, ChartType, AxisBound, AxisScale } from '../engine/types';
 import { Eye, EyeOff, Plus, Trash2, X } from 'lucide-react';
@@ -27,19 +27,6 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
 
   const [showAddTrace, setShowAddTrace] = useState(false);
   const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(null);
-  const addTraceRef = useRef<HTMLDivElement>(null);
-
-  // Close add-trace popover on outside click
-  useEffect(() => {
-    if (!showAddTrace) return;
-    const handler = (e: MouseEvent) => {
-      if (addTraceRef.current && !addTraceRef.current.contains(e.target as Node)) {
-        setShowAddTrace(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [showAddTrace]);
 
   // Dataset IDs participating in this chart
   const chartDatasetIds = new Set(chart.series.map((s) => s.datasetId));
@@ -67,13 +54,6 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
     }
     return Array.from(keySet.entries());
   })();
-
-  // Auto-select first dataset when opening add-trace
-  useEffect(() => {
-    if (showAddTrace && !selectedDatasetId && datasets.length > 0) {
-      setSelectedDatasetId(datasets[0].id);
-    }
-  }, [showAddTrace, selectedDatasetId, datasets]);
 
   const handleAddTrace = (datasetId: string, columnKey: string, header: string) => {
     const ds = datasets.find((d) => d.id === datasetId);
@@ -185,71 +165,68 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
         ))}
 
         {/* Add trace */}
-        <div className="relative" ref={addTraceRef}>
-          <button
-            onClick={() => setShowAddTrace(!showAddTrace)}
-            className="flex items-center gap-1.5 px-2 py-1 text-[10px] text-white/30 hover:text-white/50 rounded-md hover:bg-white/5 transition-all cursor-pointer"
-          >
-            <Plus className="w-3 h-3" />
-            Add trace
-          </button>
+        <button
+          onClick={() => {
+            setShowAddTrace(!showAddTrace);
+            if (showAddTrace) setSelectedDatasetId(null);
+          }}
+          className="flex items-center gap-1.5 px-2 py-1 text-[10px] text-white/30 hover:text-white/50 rounded-md hover:bg-white/5 transition-all cursor-pointer"
+        >
+          <Plus className="w-3 h-3" />
+          Add trace
+        </button>
 
-          {showAddTrace && (
-            <div className="absolute left-0 top-full mt-1 z-50 bg-[#1a1a3a]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl p-3 min-w-[220px]">
-              {/* Dataset selector */}
-              {datasets.length > 1 && (
-                <div className="flex flex-wrap gap-1 mb-2">
-                  {datasets.map((ds) => (
+        {showAddTrace && (
+          <div className="ml-4 pl-2 border-l border-white/5 space-y-1.5">
+            {datasets.length > 1 && (
+              <div className="flex flex-wrap gap-1">
+                {datasets.map((ds) => (
+                  <button
+                    key={ds.id}
+                    onClick={() => setSelectedDatasetId(ds.id)}
+                    className={`px-2 py-1 text-[10px] rounded-md transition-all cursor-pointer ${
+                      selectedDatasetId === ds.id
+                        ? 'bg-white/10 text-white/80'
+                        : 'text-white/30 hover:text-white/50'
+                    }`}
+                  >
+                    {ds.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            {(selectedDatasetId || datasets.length === 1 ? selectedDatasetId ?? datasets[0]?.id : null) && (() => {
+              const ds = datasets.find((d) => d.id === (selectedDatasetId ?? datasets[0]?.id));
+              if (!ds) return null;
+              const existingKeys = new Set(
+                chart.series
+                  .filter((s) => s.datasetId === ds.id)
+                  .map((s) => s.columnKey)
+              );
+              const availableCols = ds.table.columns.filter(
+                (c) => (c.type === 'numeric' || c.type === 'categorical') && !existingKeys.has(c.key)
+              );
+              if (availableCols.length === 0) {
+                return <p className="text-[10px] text-white/30 py-1">No available columns</p>;
+              }
+              return (
+                <div className="space-y-0.5">
+                  {availableCols.map((col) => (
                     <button
-                      key={ds.id}
-                      onClick={() => setSelectedDatasetId(ds.id)}
-                      className={`px-2 py-1 text-[10px] rounded-md transition-all cursor-pointer ${
-                        selectedDatasetId === ds.id
-                          ? 'bg-white/10 text-white/80'
-                          : 'text-white/30 hover:text-white/50'
-                      }`}
+                      key={col.key}
+                      onClick={() => {
+                        handleAddTrace(ds.id, col.key, col.header);
+                      }}
+                      className="w-full text-left px-2 py-1.5 text-[11px] text-white/50 hover:text-white/80 hover:bg-white/5 rounded-md transition-all cursor-pointer"
                     >
-                      {ds.name}
+                      {col.header}
                     </button>
                   ))}
                 </div>
-              )}
-
-              {/* Column list */}
-              {selectedDatasetId && (() => {
-                const ds = datasets.find((d) => d.id === selectedDatasetId);
-                if (!ds) return null;
-                const existingKeys = new Set(
-                  chart.series
-                    .filter((s) => s.datasetId === selectedDatasetId)
-                    .map((s) => s.columnKey)
-                );
-                const availableCols = ds.table.columns.filter(
-                  (c) => (c.type === 'numeric' || c.type === 'categorical') && !existingKeys.has(c.key)
-                );
-                if (availableCols.length === 0) {
-                  return <p className="text-[10px] text-white/30">No available columns</p>;
-                }
-                return (
-                  <div className="space-y-0.5 max-h-40 overflow-y-auto">
-                    {availableCols.map((col) => (
-                      <button
-                        key={col.key}
-                        onClick={() => {
-                          handleAddTrace(ds.id, col.key, col.header);
-                          setShowAddTrace(false);
-                        }}
-                        className="w-full text-left px-2 py-1.5 text-[11px] text-white/50 hover:text-white/80 hover:bg-white/5 rounded-md transition-all cursor-pointer"
-                      >
-                        {col.header}
-                      </button>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-          )}
-        </div>
+              );
+            })()}
+          </div>
+        )}
       </div>
     </div>
   );
