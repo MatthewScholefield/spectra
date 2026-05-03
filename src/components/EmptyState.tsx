@@ -1,10 +1,11 @@
 import { useRef, useState, useEffect, type DragEvent } from 'react';
-import { Upload, Sparkles, Check } from 'lucide-react';
+import { Upload, Sparkles, Check, Radio } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store/useStore';
 
 export function EmptyState() {
   const addData = useStore((s) => s.addData);
+  const setShowConnectModal = useStore((s) => s.setShowConnectModal);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [showPastePopover, setShowPastePopover] = useState(false);
@@ -110,6 +111,16 @@ export function EmptyState() {
         >
           <Upload className="w-4 h-4" />
           Upload file
+        </button>
+
+        <span className="text-white/30 text-sm">or</span>
+
+        <button
+          onClick={() => setShowConnectModal(true)}
+          className="px-6 py-3 rounded-xl text-sm font-medium bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80 hover:border-white/20 transition-all duration-300 flex items-center gap-2.5 cursor-pointer"
+        >
+          <Radio className="w-4 h-4" />
+          Live source
         </button>
 
         <input

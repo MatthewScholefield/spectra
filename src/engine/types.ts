@@ -13,10 +13,27 @@ export interface DataTable {
   indexColumnKey: string | null;
 }
 
+export type SourceStatus = 'idle' | 'connecting' | 'live' | 'paused' | 'completed' | 'error';
+
+export interface StreamSource {
+  id: string;
+  kind: 'stream';
+  name: string;
+  serverUrl: string;
+  projectName: string;
+  runId: string;
+  baseline?: string;
+  status: SourceStatus;
+  runConfig?: Record<string, unknown>;
+}
+
+export type DataSource = StreamSource;
+
 export interface Dataset {
   id: string;
   name: string;
   table: DataTable;
+  sourceId?: string;
 }
 
 export type ChartType = 'line' | 'area' | 'bar' | 'scatter';

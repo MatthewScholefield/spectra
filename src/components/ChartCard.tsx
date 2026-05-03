@@ -60,8 +60,16 @@ function CustomTooltip({ active, payload, label }: {
 export function ChartCard({ chart, index }: { chart: ChartConfigType; index: number }) {
   const [showControls, setShowControls] = useState(false);
   const datasets = useStore((s) => s.datasets);
+  const sources = useStore((s) => s.sources);
   const getMergedData = useStore((s) => s.getMergedData);
   const data = useMemo(() => getMergedData(chart.id), [chart.id, chart.series, chart.xKey, datasets]);
+
+  const isLive = chart.series.some((s) => {
+    const ds = datasets.find((d) => d.id === s.datasetId);
+    if (!ds?.sourceId) return false;
+    const source = sources.find((src) => src.id === ds.sourceId);
+    return source?.status === 'live' || source?.status === 'connecting';
+  });
 
   const visibleSeries = chart.series.filter((s) => s.visible);
 
@@ -132,6 +140,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
       data: sampledData,
       margin: { top: 8, right: 8, left: 0, bottom: 0 },
     };
+    const animProps = isLive ? { isAnimationActive: false } : {};
 
     const xKey = chart.xKey;
     const xAxisProps = { dataKey: xKey, tick: { fontSize: 11 }, tickLine: false, axisLine: false, ...(chart.xScale !== 'linear' ? { scale: chart.xScale } : {}), ...(xDomain ? { type: 'number' as const, domain: xDomain, allowDataOverflow: true } : {}) };
@@ -157,6 +166,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4, strokeWidth: 0 }}
+                {...animProps}
               />
             ))}
             <Legend formatter={renderLegend} />
@@ -177,6 +187,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
                 name={displayLabels.get(s)!}
                 fill={s.color}
                 radius={[4, 4, 0, 0]}
+                {...animProps}
               />
             ))}
             <Legend formatter={renderLegend} />
@@ -222,6 +233,7 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4, strokeWidth: 0 }}
+                {...animProps}
               />
             ))}
             <Legend formatter={renderLegend} />

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Dataset, ChartConfig, ChartType, AxisBound, AxisScale, SeriesConfig } from '../engine/types';
+import type { Dataset, ChartConfig, ChartType, AxisBound, AxisScale, SeriesConfig, StreamSource, SourceStatus, DataTable } from '../engine/types';
 import { parseRawData } from '../engine/parser';
 import { generateCharts, mergeDatasetIntoCharts, PRIMARY_PALETTE } from '../engine/analyzer';
 import { generateId, generateDatasetName } from '../utils/format';
@@ -9,13 +9,22 @@ type GridColumns = 1 | 2 | 3;
 interface AppState {
   datasets: Dataset[];
   charts: ChartConfig[];
+  sources: StreamSource[];
   gridColumns: GridColumns;
   showDataModal: boolean;
+  showConnectModal: boolean;
+  showConfigDiff: boolean;
   editingChartId: string | null;
 
   addData: (rawText: string, name?: string) => void;
+  addDatasetFromTable: (table: DataTable, name?: string, sourceId?: string) => string;
+  appendRowsToDataset: (datasetId: string, rows: Record<string, unknown>[]) => void;
   removeDataset: (id: string) => void;
   renameDataset: (id: string, name: string) => void;
+
+  addSource: (source: StreamSource) => void;
+  updateSourceStatus: (sourceId: string, status: SourceStatus) => void;
+  removeSource: (sourceId: string) => void;
 
   updateChartTitle: (chartId: string, title: string) => void;
   updateChartType: (chartId: string, type: ChartType) => void;
@@ -33,6 +42,8 @@ interface AppState {
 
   setGridColumns: (cols: GridColumns) => void;
   setShowDataModal: (show: boolean) => void;
+  setShowConnectModal: (show: boolean) => void;
+  setShowConfigDiff: (show: boolean) => void;
   setEditingChartId: (id: string | null) => void;
 
   getMergedData: (chartId: string) => Record<string, unknown>[];
@@ -41,19 +52,26 @@ interface AppState {
 export const useStore = create<AppState>((set, get) => ({
   datasets: [],
   charts: [],
+  sources: [],
   gridColumns: 2,
   showDataModal: false,
+  showConnectModal: false,
+  showConfigDiff: false,
   editingChartId: null,
 
   addData: (rawText: string, name?: string) => {
     const table = parseRawData(rawText);
     if (!table) return;
+    get().addDatasetFromTable(table, name);
+    set({ showDataModal: false });
+  },
 
+  addDatasetFromTable: (table: DataTable, name?: string, sourceId?: string): string => {
     const state = get();
     const datasetId = generateId();
     const datasetName = name || generateDatasetName(state.datasets.length);
 
-    const dataset: Dataset = { id: datasetId, name: datasetName, table };
+    const dataset: Dataset = { id: datasetId, name: datasetName, table, sourceId };
 
     let newCharts: ChartConfig[];
     if (state.datasets.length === 0) {
@@ -65,7 +83,42 @@ export const useStore = create<AppState>((set, get) => ({
     set({
       datasets: [...state.datasets, dataset],
       charts: newCharts,
-      showDataModal: false,
+    });
+    return datasetId;
+  },
+
+  appendRowsToDataset: (datasetId: string, rows: Record<string, unknown>[]) => {
+    set((state) => {
+      const datasets = state.datasets.map((d) => {
+        if (d.id !== datasetId) return d;
+
+        const colMap = new Map(d.table.columns.map((c) => [c.key, c]));
+        let newRowCount = d.table.rowCount;
+
+        for (const row of rows) {
+          for (const [key, value] of Object.entries(row)) {
+            if (key.startsWith('_')) continue;
+            let col = colMap.get(key);
+            if (!col) {
+              const inferredType = typeof value === 'number' ? 'numeric' as const : 'categorical' as const;
+              col = { key, header: key, type: inferredType, values: [] };
+              colMap.set(key, col);
+            }
+            col.values.push(value as string | number | null);
+          }
+          newRowCount++;
+        }
+
+        return {
+          ...d,
+          table: {
+            columns: Array.from(colMap.values()),
+            rowCount: newRowCount,
+            indexColumnKey: d.table.indexColumnKey,
+          },
+        };
+      });
+      return { datasets };
     });
   },
 
@@ -88,6 +141,38 @@ export const useStore = create<AppState>((set, get) => ({
         d.id === id ? { ...d, name } : d
       ),
     }));
+  },
+
+  addSource: (source: StreamSource) => {
+    set((state) => ({ sources: [...state.sources, source] }));
+  },
+
+  updateSourceStatus: (sourceId: string, status: SourceStatus) => {
+    set((state) => ({
+      sources: state.sources.map((s) =>
+        s.id === sourceId ? { ...s, status } : s
+      ),
+    }));
+  },
+
+  removeSource: (sourceId: string) => {
+    set((state) => {
+      const datasets = state.datasets.filter((d) => d.sourceId !== sourceId);
+      const removedDatasetIds = new Set(
+        state.datasets.filter((d) => d.sourceId === sourceId).map((d) => d.id)
+      );
+      const charts = state.charts
+        .map((chart) => ({
+          ...chart,
+          series: chart.series.filter((s) => !removedDatasetIds.has(s.datasetId)),
+        }))
+        .filter((chart) => chart.series.length > 0);
+      return {
+        sources: state.sources.filter((s) => s.id !== sourceId),
+        datasets,
+        charts,
+      };
+    });
   },
 
   updateChartTitle: (chartId: string, title: string) => {
@@ -231,6 +316,8 @@ export const useStore = create<AppState>((set, get) => ({
 
   setGridColumns: (cols: GridColumns) => set({ gridColumns: cols }),
   setShowDataModal: (show: boolean) => set({ showDataModal: show }),
+  setShowConnectModal: (show: boolean) => set({ showConnectModal: show }),
+  setShowConfigDiff: (show: boolean) => set({ showConfigDiff: show }),
   setEditingChartId: (id: string | null) => set({ editingChartId: id }),
 
   getMergedData: (chartId: string) => {

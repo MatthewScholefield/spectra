@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { Plus, Columns2, Columns3, Square, X, Pencil, Check } from 'lucide-react';
+import { Plus, Columns2, Columns3, Square, X, Pencil, Check, Radio, GitCompare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
 
 export function Toolbar() {
   const datasets = useStore((s) => s.datasets);
+  const sources = useStore((s) => s.sources);
   const gridColumns = useStore((s) => s.gridColumns);
   const setGridColumns = useStore((s) => s.setGridColumns);
   const setShowDataModal = useStore((s) => s.setShowDataModal);
+  const setShowConnectModal = useStore((s) => s.setShowConnectModal);
+  const setShowConfigDiff = useStore((s) => s.setShowConfigDiff);
   const renameDataset = useStore((s) => s.renameDataset);
   const removeDataset = useStore((s) => s.removeDataset);
   const createChart = useStore((s) => s.createChart);
@@ -26,54 +29,59 @@ export function Toolbar() {
 
       {/* Dataset chips */}
       <div className="flex gap-2 flex-1 flex-wrap">
-        {datasets.map((ds) => (
-          <div
-            key={ds.id}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/8 text-xs text-white/60 group"
-          >
-            {editingId === ds.id ? (
-              <>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="text-xs bg-transparent w-20 py-0 px-0 border-none outline-none"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      renameDataset(ds.id, editName);
-                      setEditingId(null);
-                    }
-                    if (e.key === 'Escape') setEditingId(null);
-                  }}
-                />
-                <button
-                  onClick={() => { renameDataset(ds.id, editName); setEditingId(null); }}
-                  className="text-white/30 hover:text-white/60 cursor-pointer"
-                >
-                  <Check className="w-3 h-3" />
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="w-2 h-2 rounded-full bg-indigo-400/60" />
-                <span>{ds.name}</span>
-                <button
-                  onClick={() => { setEditingId(ds.id); setEditName(ds.name); }}
-                  className="text-white/20 hover:text-white/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                >
-                  <Pencil className="w-2.5 h-2.5" />
-                </button>
-                <button
-                  onClick={() => removeDataset(ds.id)}
-                  className="text-white/20 hover:text-red-400/60 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </>
-            )}
-          </div>
-        ))}
+        {datasets.map((ds) => {
+          const source = ds.sourceId ? sources.find((s) => s.id === ds.sourceId) : null;
+          const liveDot = source?.status === 'live' ? 'bg-green-400' : source?.status === 'connecting' ? 'bg-yellow-400 animate-pulse' : null;
+          return (
+            <div
+              key={ds.id}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/8 text-xs text-white/60 group"
+            >
+              {editingId === ds.id ? (
+                <>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="text-xs bg-transparent w-20 py-0 px-0 border-none outline-none"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        renameDataset(ds.id, editName);
+                        setEditingId(null);
+                      }
+                      if (e.key === 'Escape') setEditingId(null);
+                    }}
+                  />
+                  <button
+                    onClick={() => { renameDataset(ds.id, editName); setEditingId(null); }}
+                    className="text-white/30 hover:text-white/60 cursor-pointer"
+                  >
+                    <Check className="w-3 h-3" />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span className={`w-2 h-2 rounded-full ${liveDot ?? 'bg-indigo-400/60'}`} />
+                  <span>{ds.name}</span>
+                  {liveDot && <span className="text-[9px] text-white/25 uppercase">live</span>}
+                  <button
+                    onClick={() => { setEditingId(ds.id); setEditName(ds.name); }}
+                    className="text-white/20 hover:text-white/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  >
+                    <Pencil className="w-2.5 h-2.5" />
+                  </button>
+                  <button
+                    onClick={() => removeDataset(ds.id)}
+                    className="text-white/20 hover:text-red-400/60 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Grid toggle */}
@@ -117,6 +125,26 @@ export function Toolbar() {
           New Chart
         </button>
       )}
+
+      {/* Compare Config button */}
+      {sources.length > 1 && sources.some((s) => s.runConfig) && (
+        <button
+          onClick={() => setShowConfigDiff(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white/50 hover:bg-white/10 transition-all cursor-pointer"
+        >
+          <GitCompare className="w-3.5 h-3.5" />
+          Compare
+        </button>
+      )}
+
+      {/* Connect button */}
+      <button
+        onClick={() => setShowConnectModal(true)}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white/50 hover:bg-white/10 transition-all cursor-pointer"
+      >
+        <Radio className="w-3.5 h-3.5" />
+        Connect
+      </button>
 
       {/* Add data button */}
       <button

@@ -5,6 +5,9 @@ import { EmptyState } from './components/EmptyState';
 import { VisualizationView } from './components/VisualizationView';
 import { Toolbar } from './components/Toolbar';
 import { DataInputModal } from './components/DataInputModal';
+import { ConnectSourceModal } from './components/ConnectSourceModal';
+import { ConfigDiffPanel } from './components/ConfigDiffPanel';
+import { StreamManager } from './components/StreamManager';
 
 export default function App() {
   const datasets = useStore((s) => s.datasets);
@@ -26,6 +29,9 @@ export default function App() {
       )}
 
       <DataInputModal />
+      <ConnectSourceModal />
+      <ConfigDiffPanel />
+      <StreamManager />
     </div>
   );
 }
