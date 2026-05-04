@@ -90,8 +90,8 @@ body {
 /* Glass card style */
 .glass-card {
   background: var(--color-glass);
-  backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px); /* backdrop-filter must be _after_ -webkit-backdrop-filter or it will be stripped out */
   border: 1px solid var(--color-glass-border);
   border-radius: 16px;
 }
