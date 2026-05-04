@@ -210,7 +210,7 @@ export function ConnectSourceModal() {
                           payload (one metric row). Send <code className="text-white/50 bg-white/5 px-1 rounded">complete</code> to end the stream.
                         </p>
                         <a
-                          href="https://github.com/matthewscholefield/spectra#live-data-sources"
+                          href="https://github.com/MatthewScholefield/spectria#live-data-sources"
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-block text-indigo-300/60 hover:text-indigo-300/90 underline underline-offset-2 transition-colors"

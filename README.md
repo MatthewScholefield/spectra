@@ -1,4 +1,4 @@
-# Spectra
+# Spectria
 
 Zero-friction data visualization. Paste data, see charts.
 

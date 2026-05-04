@@ -25,7 +25,7 @@ export function Toolbar() {
       animate={{ opacity: 1, y: 0 }}
     >
       {/* Logo */}
-      <span className="text-sm font-light text-white/50 tracking-wide mr-2">Spectra</span>
+      <span className="text-sm font-light text-white/50 tracking-wide mr-2">Spectria</span>
 
       {/* Dataset chips */}
       <div className="flex gap-2 flex-1 flex-wrap">

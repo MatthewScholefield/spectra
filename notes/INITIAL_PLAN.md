@@ -1,10 +1,10 @@
-# Spectra - Initial Plan
+# Spectria - Initial Plan
 
-This document captures the original design and architecture plan for Spectra. Implementation may deviate from this over time.
+This document captures the original design and architecture plan for Spectria. Implementation may deviate from this over time.
 
 ## Product Vision
 
-Spectra is a zero-friction data visualization tool. You paste data, it visualizes. No configuration wizards, no file format dialogs, no "step 1 of 5" flows. Just: paste, see, refine.
+Spectria is a zero-friction data visualization tool. You paste data, it visualizes. No configuration wizards, no file format dialogs, no "step 1 of 5" flows. Just: paste, see, refine.
 
 The experience should feel magical — like the app *understands* your data and presents it beautifully without asking questions. But the magic is grounded in smart heuristics: detecting delimiters, inferring types, identifying index columns, and choosing sensible chart defaults.
 

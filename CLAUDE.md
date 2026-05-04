@@ -1,4 +1,4 @@
-# Spectra - CLAUDE.md
+# Spectria - CLAUDE.md
 
 ## Tech Stack
 React 19 + TypeScript, Vite, Tailwind CSS 4, Recharts, Zustand, PapaParse, Framer Motion, Lucide React
