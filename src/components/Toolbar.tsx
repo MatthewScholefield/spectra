@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Plus, Columns2, Columns3, Square, X, Pencil, Check, Radio, GitCompare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
+import { computeDisplayNames, getFullName } from '../utils/format';
+
+const LOCAL_DATA_MODE = !!(import.meta.env.VITE_LOCAL_DATA_MODE || import.meta.env.VITE_LOCAL_DATA_URL);
 
 export function Toolbar() {
   const datasets = useStore((s) => s.datasets);
@@ -18,6 +21,8 @@ export function Toolbar() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
 
+  const { sharedPrefix, displayNames } = computeDisplayNames(datasets);
+
   return (
     <motion.div
       className="flex items-center gap-3 px-6 py-3 border-b border-white/5 bg-black/20 backdrop-blur-md"
@@ -28,10 +33,14 @@ export function Toolbar() {
       <span className="text-sm font-light text-white/50 tracking-wide mr-2">Spectria</span>
 
       {/* Dataset chips */}
-      <div className="flex gap-2 flex-1 flex-wrap">
+      <div className="flex gap-2 flex-1 flex-wrap items-center">
+        {sharedPrefix && (
+          <span className="text-xs text-white/30">{sharedPrefix}</span>
+        )}
         {datasets.map((ds) => {
           const source = ds.sourceId ? sources.find((s) => s.id === ds.sourceId) : null;
           const liveDot = source?.status === 'live' ? 'bg-green-400' : source?.status === 'connecting' ? 'bg-yellow-400 animate-pulse' : null;
+          const chipLabel = displayNames.get(ds.id) ?? getFullName(ds.origin);
           return (
             <div
               key={ds.id}
@@ -63,10 +72,10 @@ export function Toolbar() {
               ) : (
                 <>
                   <span className={`w-2 h-2 rounded-full ${liveDot ?? 'bg-indigo-400/60'}`} />
-                  <span>{ds.name}</span>
+                  <span>{chipLabel}</span>
                   {liveDot && <span className="text-[9px] text-white/25 uppercase">live</span>}
                   <button
-                    onClick={() => { setEditingId(ds.id); setEditName(ds.name); }}
+                    onClick={() => { setEditingId(ds.id); setEditName(getFullName(ds.origin)); }}
                     className="text-white/20 hover:text-white/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                   >
                     <Pencil className="w-2.5 h-2.5" />
@@ -137,22 +146,24 @@ export function Toolbar() {
         </button>
       )}
 
-      {/* Connect button */}
-      <button
-        onClick={() => setShowConnectModal(true)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white/50 hover:bg-white/10 transition-all cursor-pointer"
-      >
-        <Radio className="w-3.5 h-3.5" />
-        Connect
-      </button>
+      {/* Connect button (hidden in local data mode — "Add Run" replaces it) */}
+      {!LOCAL_DATA_MODE && (
+        <button
+          onClick={() => setShowConnectModal(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white/50 hover:bg-white/10 transition-all cursor-pointer"
+        >
+          <Radio className="w-3.5 h-3.5" />
+          Connect
+        </button>
+      )}
 
-      {/* Add data button */}
+      {/* Add data / Add run button */}
       <button
-        onClick={() => setShowDataModal(true)}
+        onClick={() => LOCAL_DATA_MODE ? setShowConnectModal(true) : setShowDataModal(true)}
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/20 border border-indigo-400/20 text-xs text-indigo-200 hover:bg-indigo-500/30 transition-all cursor-pointer"
       >
         <Plus className="w-3.5 h-3.5" />
-        Add Data
+        {LOCAL_DATA_MODE ? 'Add Run' : 'Add Data'}
       </button>
     </motion.div>
   );

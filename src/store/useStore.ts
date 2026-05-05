@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Dataset, ChartConfig, ChartType, AxisBound, AxisScale, SeriesConfig, StreamSource, SourceStatus, DataTable } from '../engine/types';
+import type { Dataset, ChartConfig, ChartType, AxisBound, AxisScale, SeriesConfig, StreamSource, SourceStatus, DataTable, DatasetOrigin } from '../engine/types';
 import { parseRawData } from '../engine/parser';
 import { generateCharts, mergeDatasetIntoCharts, PRIMARY_PALETTE } from '../engine/analyzer';
 import { generateId, generateDatasetName } from '../utils/format';
@@ -17,7 +17,7 @@ interface AppState {
   editingChartId: string | null;
 
   addData: (rawText: string, name?: string) => void;
-  addDatasetFromTable: (table: DataTable, name?: string, sourceId?: string) => string;
+  addDatasetFromTable: (table: DataTable, origin: DatasetOrigin, sourceId?: string) => string;
   appendRowsToDataset: (datasetId: string, rows: Record<string, unknown>[]) => void;
   removeDataset: (id: string) => void;
   renameDataset: (id: string, name: string) => void;
@@ -62,16 +62,17 @@ export const useStore = create<AppState>((set, get) => ({
   addData: (rawText: string, name?: string) => {
     const table = parseRawData(rawText);
     if (!table) return;
-    get().addDatasetFromTable(table, name);
+    const state = get();
+    const origin: DatasetOrigin = { kind: 'manual', label: name || generateDatasetName(state.datasets.length) };
+    get().addDatasetFromTable(table, origin);
     set({ showDataModal: false });
   },
 
-  addDatasetFromTable: (table: DataTable, name?: string, sourceId?: string): string => {
+  addDatasetFromTable: (table: DataTable, origin: DatasetOrigin, sourceId?: string): string => {
     const state = get();
     const datasetId = generateId();
-    const datasetName = name || generateDatasetName(state.datasets.length);
 
-    const dataset: Dataset = { id: datasetId, name: datasetName, table, sourceId };
+    const dataset: Dataset = { id: datasetId, origin, table, sourceId };
 
     let newCharts: ChartConfig[];
     if (state.datasets.length === 0) {
@@ -138,7 +139,7 @@ export const useStore = create<AppState>((set, get) => ({
   renameDataset: (id: string, name: string) => {
     set((state) => ({
       datasets: state.datasets.map((d) =>
-        d.id === id ? { ...d, name } : d
+        d.id === id ? { ...d, customName: name } : d
       ),
     }));
   },

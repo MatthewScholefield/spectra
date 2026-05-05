@@ -4,5 +4,5 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: '/spectria/',
+  base: (process.env.VITE_LOCAL_DATA_MODE || process.env.VITE_LOCAL_DATA_URL) ? '/' : '/spectria/',
 })

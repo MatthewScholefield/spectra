@@ -29,9 +29,14 @@ export interface StreamSource {
 
 export type DataSource = StreamSource;
 
+export type DatasetOrigin =
+  | { kind: 'manual'; label: string }
+  | { kind: 'run'; project: string; path: string[] };
+
 export interface Dataset {
   id: string;
-  name: string;
+  origin: DatasetOrigin;
+  customName?: string;
   table: DataTable;
   sourceId?: string;
 }

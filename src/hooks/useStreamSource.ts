@@ -1,8 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useStore } from '../store/useStore';
 import { rowToValues, createTableFromHeaders } from '../engine/stream-adapter';
-import type { StreamSource, DataTable } from '../engine/types';
-import { generateId } from '../utils/format';
+import type { StreamSource, DataTable, DatasetOrigin } from '../engine/types';
+import { generateId, parseRunPath } from '../utils/format';
 
 export function useStreamSource(source: StreamSource | null) {
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -28,14 +28,23 @@ export function useStreamSource(source: StreamSource | null) {
     let datasetId: string | null = null;
     let table: DataTable | null = null;
 
+    const origin: DatasetOrigin = { kind: 'run', project: source.projectName, path: parseRunPath(source.runId) };
+
     updateSourceStatus(source.id, 'connecting');
 
+    const abortController = new AbortController();
+
     const init = async () => {
+      let snapshotCount = 0;
+      let runCompleted = false;
+
       try {
         // Try to load full snapshot
-        const res = await fetch(snapshotUrl);
+        const res = await fetch(snapshotUrl, { signal: abortController.signal });
         if (res.ok) {
-          const data = await res.json();
+          const result = await res.json();
+          const data = Array.isArray(result) ? result : result.rows;
+          const runStatus = Array.isArray(result) ? null : result.status;
           if (Array.isArray(data) && data.length > 0) {
             const headers = Object.keys(data[0]).filter((k) => !k.startsWith('_'));
             table = createTableFromHeaders(headers);
@@ -46,13 +55,21 @@ export function useStreamSource(source: StreamSource | null) {
               }
               table!.rowCount++;
             }
-            datasetId = addDatasetFromTable(table, source.name, source.id);
+            datasetId = addDatasetFromTable(table, origin, source.id);
             datasetIdRef.current = datasetId;
+            snapshotCount = data.length;
+          }
+          if (runStatus === 'completed') {
+            updateSourceStatus(source.id, 'completed');
+            runCompleted = true;
           }
         }
       } catch {
+        if (abortController.signal.aborted) return;
         // Snapshot not available — start fresh
       }
+
+      if (runCompleted || abortController.signal.aborted) return;
 
       // Open SSE stream
       const es = new EventSource(sseUrl);
@@ -64,6 +81,12 @@ export function useStreamSource(source: StreamSource | null) {
 
       es.addEventListener('row', (e: MessageEvent) => {
         try {
+          // Skip rows already loaded from snapshot
+          if (snapshotCount > 0) {
+            snapshotCount--;
+            return;
+          }
+
           const row = JSON.parse(e.data);
           const values = rowToValues(row);
 
@@ -75,7 +98,7 @@ export function useStreamSource(source: StreamSource | null) {
               col.values.push(values.get(col.key) ?? null);
             }
             table.rowCount = 1;
-            datasetId = addDatasetFromTable(table, source.name, source.id);
+            datasetId = addDatasetFromTable(table, origin, source.id);
             datasetIdRef.current = datasetId;
           } else {
             // Append row to existing dataset
@@ -102,6 +125,7 @@ export function useStreamSource(source: StreamSource | null) {
     init();
 
     return () => {
+      abortController.abort();
       disconnect();
     };
   }, [source?.id, source?.serverUrl, source?.projectName, source?.runId]);

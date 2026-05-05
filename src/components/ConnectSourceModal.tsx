@@ -1,24 +1,14 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Server, FolderOpen, Play, Loader2, AlertCircle, Check, Info, ChevronDown } from 'lucide-react';
+import { X, Server, FolderOpen, Plus, Loader2, AlertCircle, Check, Info, ChevronDown, GitFork } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { fetchProjects, fetchRuns } from '../sources/keras/api';
 import { connectRun } from '../hooks/useStreamSource';
+import { timeAgo } from '../utils/format';
 import type { RunInfo, ProjectInfo } from '../sources/keras/types';
 
-function timeAgo(epoch: number | null): string {
-  if (!epoch) return 'completed';
-  const seconds = Math.floor(Date.now() / 1000) - epoch;
-  if (seconds < 60) return 'just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  return `${months}mo ago`;
-}
+const LOCAL_DATA_MODE = !!(import.meta.env.VITE_LOCAL_DATA_MODE || import.meta.env.VITE_LOCAL_DATA_URL);
+const LOCAL_DATA_URL: string = import.meta.env.VITE_LOCAL_DATA_URL ?? '';
 
 function RunRow({ serverUrl, projectName, runInfo }: {
   serverUrl: string;
@@ -42,7 +32,7 @@ function RunRow({ serverUrl, projectName, runInfo }: {
       {existing && <span className={`w-2 h-2 rounded-full shrink-0 ${statusDot}`} />}
       <span className="flex-1 text-xs text-white/70 truncate">{runInfo.run_id}</span>
       {runInfo.baseline && (
-        <span className="text-[10px] text-white/30">baseline: {runInfo.baseline}</span>
+        <span className="text-[10px] text-white/30 flex items-center gap-0.5"><GitFork className="w-2.5 h-2.5" />{runInfo.baseline}</span>
       )}
       <span className="text-[10px] text-white/25 uppercase">
         {runInfo.status === 'running' ? 'running' : timeAgo(runInfo.finished_at)}
@@ -54,7 +44,7 @@ function RunRow({ serverUrl, projectName, runInfo }: {
           ))}
           className="p-1 rounded hover:bg-white/10 text-white/40 hover:text-white/70 transition-colors cursor-pointer"
         >
-          <Play className="w-3 h-3" />
+          <Plus className="w-3 h-3" />
         </button>
       ) : (
         <span className="text-[10px] text-white/30 capitalize flex items-center gap-1">
@@ -70,13 +60,19 @@ export function ConnectSourceModal() {
   const showConnectModal = useStore((s) => s.showConnectModal);
   const setShowConnectModal = useStore((s) => s.setShowConnectModal);
 
-  const [serverUrl, setServerUrl] = useState('http://localhost:8420');
+  const [serverUrl, setServerUrl] = useState(LOCAL_DATA_MODE ? LOCAL_DATA_URL : 'http://localhost:8420');
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [runs, setRuns] = useState<RunInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showInfo, setShowInfo] = useState(false);
+
+  useEffect(() => {
+    if (LOCAL_DATA_MODE && showConnectModal) {
+      handleFetchProjects();
+    }
+  }, [showConnectModal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFetchProjects = useCallback(async () => {
     setLoading(true);
@@ -160,9 +156,9 @@ export function ConnectSourceModal() {
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
               <div>
-                <h2 className="text-sm font-medium text-white/80">Connect Live Source</h2>
+                <h2 className="text-sm font-medium text-white/80">{LOCAL_DATA_MODE ? 'Browse Runs' : 'Connect Live Source'}</h2>
                 <p className="text-[11px] text-white/30 mt-0.5">
-                  Stream training metrics from a live server in real time
+                  {LOCAL_DATA_MODE ? 'Select a run to visualize' : 'Stream training metrics from a live server in real time'}
                 </p>
               </div>
               <button
@@ -173,8 +169,9 @@ export function ConnectSourceModal() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            <div className={`flex-1 overflow-y-auto ${LOCAL_DATA_MODE ? 'p-4' : 'p-5'} space-y-4`}>
               {/* Supported sources info */}
+              {!LOCAL_DATA_MODE && (
               <div className="rounded-lg bg-white/[0.03] border border-white/5 px-3.5 py-3">
                 <button
                   onClick={() => setShowInfo(!showInfo)}
@@ -222,29 +219,32 @@ export function ConnectSourceModal() {
                   )}
                 </AnimatePresence>
               </div>
-              {/* Server URL */}
-              <div>
-                <label className="text-[10px] text-white/30 uppercase tracking-wider mb-1.5 block">
-                  Server URL
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={serverUrl}
-                    onChange={(e) => { setServerUrl(e.target.value); setProjects([]); setSelectedProject(null); setRuns([]); }}
-                    className="flex-1 text-xs bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white/70 placeholder:text-white/25 focus:outline-none focus:border-indigo-500/40"
-                    placeholder="http://localhost:8420"
-                  />
-                  <button
-                    onClick={handleFetchProjects}
-                    disabled={loading || !serverUrl}
-                    className="px-3 py-2 rounded-lg bg-indigo-500/20 border border-indigo-400/20 text-xs text-indigo-200 hover:bg-indigo-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-1.5"
-                  >
-                    {loading && !projects.length ? <Loader2 className="w-3 h-3 animate-spin" /> : <Server className="w-3 h-3" />}
-                    Connect
-                  </button>
+              )}
+              {/* Server URL (hidden in local data mode — same-origin) */}
+              {!LOCAL_DATA_MODE && (
+                <div>
+                  <label className="text-[10px] text-white/30 uppercase tracking-wider mb-1.5 block">
+                    Server URL
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={serverUrl}
+                      onChange={(e) => { setServerUrl(e.target.value); setProjects([]); setSelectedProject(null); setRuns([]); }}
+                      className="flex-1 text-xs bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white/70 placeholder:text-white/25 focus:outline-none focus:border-indigo-500/40"
+                      placeholder="http://localhost:8420"
+                    />
+                    <button
+                      onClick={handleFetchProjects}
+                      disabled={loading || !serverUrl}
+                      className="px-3 py-2 rounded-lg bg-indigo-500/20 border border-indigo-400/20 text-xs text-indigo-200 hover:bg-indigo-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      {loading && !projects.length ? <Loader2 className="w-3 h-3 animate-spin" /> : <Server className="w-3 h-3" />}
+                      Connect
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {error && (
                 <div className="flex items-center gap-2 text-xs text-red-300/80 bg-red-500/10 rounded-lg px-3 py-2">
@@ -289,8 +289,8 @@ export function ConnectSourceModal() {
               {groupedRuns.map((group) => (
                 <div key={group.baseline ?? '__root__'}>
                   {group.baseline && (
-                    <p className="text-[10px] text-white/25 mb-1 ml-1">
-                      baseline: {group.baseline}
+                    <p className="text-[10px] text-white/25 mb-1 ml-1 flex items-center gap-0.5">
+                      <GitFork className="w-2.5 h-2.5" />{group.baseline}
                     </p>
                   )}
                   <div className="space-y-1">

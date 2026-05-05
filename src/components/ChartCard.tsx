@@ -29,6 +29,7 @@ function renderLegend(value: string, entry: { color?: string }) {
 import { formatNumber } from '../utils/format';
 import { downsampleData } from '../engine/downsample';
 import { getDisplayLabel } from '../engine/labels';
+import { computeDisplayNames } from '../utils/format';
 
 function CustomTooltip({ active, payload, label }: {
   active?: boolean;
@@ -78,8 +79,10 @@ export function ChartCard({ chart, index }: { chart: ChartConfigType; index: num
     chart.series.map((s) => [s, s.columnKey + '_' + s.datasetId.slice(-6)])
   );
 
+  const { displayNames: datasetDisplayNames } = computeDisplayNames(datasets);
+
   const displayLabels = new Map(
-    chart.series.map((s) => [s, getDisplayLabel(chart.series, s, datasets)])
+    chart.series.map((s) => [s, getDisplayLabel(chart.series, s, datasets, datasetDisplayNames)])
   );
 
   const visibleDataKeys = visibleSeries.map((s) => seriesKeyMap.get(s)!);

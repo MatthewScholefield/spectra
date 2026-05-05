@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import type { ChartConfig, ChartType, AxisBound, AxisScale } from '../engine/types';
 import { computeDefaultLabel } from '../engine/labels';
+import { computeDisplayNames, getFullName } from '../utils/format';
 import { Eye, EyeOff, Plus, Trash2, X } from 'lucide-react';
 
 const CHART_TYPES: { value: ChartType; label: string }[] = [
@@ -28,6 +29,8 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
 
   const [showAddTrace, setShowAddTrace] = useState(false);
   const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(null);
+
+  const { displayNames: datasetDisplayNames } = computeDisplayNames(datasets);
 
   // Dataset IDs participating in this chart
   const chartDatasetIds = new Set(chart.series.map((s) => s.datasetId));
@@ -150,7 +153,7 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
             />
             <InputWithBlurCommit
               value={series.customLabel ?? ''}
-              placeholder={computeDefaultLabel(chart.series, series, datasets)}
+              placeholder={computeDefaultLabel(chart.series, series, datasets, datasetDisplayNames)}
               onCommit={(raw) => updateSeriesLabel(chart.id, series.datasetId, series.columnKey, raw)}
               className="flex-1 text-xs bg-transparent py-0.5 placeholder:text-white/30"
             />
@@ -190,7 +193,7 @@ export function ChartControls({ chart }: { chart: ChartConfig }) {
                         : 'text-white/30 hover:text-white/50'
                     }`}
                   >
-                    {ds.name}
+                    {datasetDisplayNames.get(ds.id) ?? getFullName(ds.origin)}
                   </button>
                 ))}
               </div>

@@ -1,12 +1,16 @@
 import { useEffect } from 'react';
 import { useStore } from '../store/useStore';
 
+const LOCAL_DATA_MODE = !!(import.meta.env.VITE_LOCAL_DATA_MODE || import.meta.env.VITE_LOCAL_DATA_URL);
+
 export function useGlobalPaste() {
   const datasets = useStore((s) => s.datasets);
   const addData = useStore((s) => s.addData);
   const setShowDataModal = useStore((s) => s.setShowDataModal);
 
   useEffect(() => {
+    if (LOCAL_DATA_MODE) return;
+
     const handler = (e: ClipboardEvent) => {
       const text = e.clipboardData?.getData('text');
       if (!text?.trim()) return;
